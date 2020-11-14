@@ -1,7 +1,6 @@
 import requests
 import pandas
 from matplotlib import pyplot
-import numpy as np
 from bs4 import BeautifulSoup
 from statsmodels.tsa.arima_model import ARIMA
 from sklearn.metrics import mean_squared_error
@@ -13,7 +12,9 @@ URLS = {
     "Oschad": "https://minfin.com.ua/company/oschadbank/currency/"
 }
 
-SEARCHED_DATE = "2020-09"
+# SEARCHED_DATE = "2020-09"
+
+SEARCHED_DATE = ["2020-07", "2020-08", "2020-09", "2020-10"]
 COUNT_DAYS = 30
 
 
@@ -24,7 +25,7 @@ def main():
     ActualData = pandas.read_csv("PrivatExchange.csv", header=0, parse_dates=[0], index_col=0).values
     NumberofElements = len(ActualData)
 
-    #Use 70% of data as training, rest 30% Test model
+    #Use 70% of data as training, rest 30% Test model #
     TrainingSize = int(NumberofElements * 0.7)
     TrainingData = ActualData[0:TrainingSize]
     TestData = ActualData[TrainingSize:NumberofElements]
@@ -64,12 +65,11 @@ def main():
     #
     #         draw_graphic(bank_name)
 
-
 def write_data():
     for key, value in URLS.items():
         dic = create_dict(value)
         arr = pandas.DataFrame(data=dic)
-        arr.to_csv(f"{key}Exchange.csv", index=False)
+        arr.to_csv(str.format("{0}Exchange.csv", key), index=False)
 
 
 def draw_graphic(filename):
@@ -80,18 +80,18 @@ def draw_graphic(filename):
 
 def create_dict(bank_url):
     dic = {"Date": [], "usd": []}
+    for s_date in SEARCHED_DATE:
+        for j in range(1, COUNT_DAYS + 1):
 
-    for j in range(1, COUNT_DAYS + 1):
-
-        date = f"{SEARCHED_DATE}-{j}" if j >= 10 else f"{SEARCHED_DATE}-0{j}"
-        url = f'{bank_url}{date}/'
-        text = parse(url)
-        print(f"Parsing pages - {j}")
-        if text is None:
-            continue
-        text = process_data(text)
-        dic["Date"].append(date)
-        dic["usd"].append(text)
+            date = f"{s_date}-{j}" if j >= 10 else f"{s_date}-0{j}"
+            url = f'{bank_url}{date}/'
+            text = parse(url)
+            print(f"Parsing pages - {j}")
+            if text is None:
+                continue
+            text = process_data(text)
+            dic["Date"].append(date)
+            dic["usd"].append(text)
 
     return dic
 
@@ -114,9 +114,9 @@ def process_data(text):
     return text
 
 
-def StartArimaForecasting(Actual, P, D, Q):
-    model = ARIMA(Actual, order=(P, D, Q))
-    model_fit = model.fit(disp=0)
+def StartArimaForecasting(Actual, P, D, Q):   # P - авторегрессивная особенность модели
+    model = ARIMA(Actual, order=(P, D, Q))    # D - порядок дифференцирования
+    model_fit = model.fit(disp=0)             # Q - скользящая средняя особенность модели
     prediction = model_fit.forecast()[0]
     return prediction
 
